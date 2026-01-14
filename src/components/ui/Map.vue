@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
+
 type MapItem = {
   id: string | number;
   x: number;
@@ -61,7 +67,7 @@ function onPointerUp(e: PointerEvent) {
   cursorStyle.value = "cursor-default";
   try {
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-  } catch {}
+  } catch { }
 }
 
 // Wheel zoom keeping cursor point stable
@@ -112,45 +118,35 @@ const hudText = computed(
 </script>
 
 <template>
-  <div
-    ref="viewportRef"
-    :class="cursorStyle"
-    class="fixed inset-0 overflow-hidden select-none bg-zinc-950 text-zinc-100"
-    :style="cssVars"
-    @pointerdown="onPointerDown"
-    @pointermove="onPointerMove"
-    @pointerup="onPointerUp"
-    @pointercancel="onPointerUp"
-    @wheel="onWheel"
-  >
+  <div ref="viewportRef" :class="cursorStyle"
+    class="fixed inset-0 overflow-hidden select-none bg-zinc-950 text-zinc-100" :style="cssVars"
+    @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp"
+    @wheel="onWheel">
     <!-- Grid background (adapts to pan+zoom) -->
     <div class="absolute inset-0 pointer-events-none grid-layer" />
 
     <!-- World -->
-    <div
-      class="absolute inset-0"
-      :style="{ transform: worldTransform, transformOrigin: '0 0' }"
-    >
-      <div
-        v-for="it in items"
-        :key="it.id"
-        class="absolute -translate-x-1/2 -translate-y-1/2"
-        :style="{ left: it.x + 'px', top: it.y + 'px' }"
-      >
-        <div class="rounded-lg border border-zinc-700 bg-zinc-900/70 px-3 py-2 shadow">
-          <div class="text-sm font-medium">{{ it.label ?? it.id }}</div>
-          <div class="text-[11px] opacity-70">x={{ it.x }}, y={{ it.y }}</div>
-        </div>
-        <div
-          class="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-200/80"
-        />
+    <div class="absolute inset-0" :style="{ transform: worldTransform, transformOrigin: '0 0' }">
+      <div v-for="it in items" :key="it.id" class="absolute -translate-x-1/2 -translate-y-1/2"
+        :style="{ left: it.x + 'px', top: it.y + 'px' }">
+          <HoverCard>
+          <HoverCardTrigger>
+            <div class="container-col-flex text-center group">
+              <p class="text-xs">{{ it.label }}</p>
+              <img src="/src/assets/icons/video-camera.svg" width="64" height="64" alt="Camera Icon" />
+            </div>
+          </HoverCardTrigger>
+          <HoverCardContent>
+            <div class="text-sm font-medium">{{ it.label ?? it.id }}</div>
+            <div class="text-[11px] opacity-70">x={{ it.x }}, y={{ it.y }}</div>
+          </HoverCardContent>
+        </HoverCard>
+        
       </div>
     </div>
 
-    <div
-      v-if="showHud"
-      class="absolute glassify left-4 bottom-4 container-col-flex z-10 rounded-lg border border-border px-2 py-1 text-xs"
-    >
+    <div v-if="showHud"
+      class="absolute glassify left-4 bottom-4 container-col-flex z-10 rounded-lg border border-border px-2 py-1 text-xs">
       <p class="opacity-30">{{ hudText }}</p>
     </div>
 
@@ -175,18 +171,18 @@ const hudText = computed(
   pointer-events: none;
 
   background-image:
-    linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(to right, rgba(255,255,255,0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.12) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
 
   /* ✅ scale with zoom */
   background-size: var(--cellz) var(--cellz), var(--cellz) var(--cellz),
-                   var(--bigz) var(--bigz), var(--bigz) var(--bigz);
+    var(--bigz) var(--bigz), var(--bigz) var(--bigz);
 
   /* ✅ shift with pan */
   background-position: var(--offx) var(--offy), var(--offx) var(--offy),
-                       var(--offxb) var(--offyb), var(--offxb) var(--offyb);
+    var(--offxb) var(--offyb), var(--offxb) var(--offyb);
 }
 
 .grid-layer::after {

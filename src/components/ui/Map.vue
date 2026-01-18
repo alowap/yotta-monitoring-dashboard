@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { VisArea, VisGroupedBar, VisXYContainer } from '@unovis/vue'
+import { ChartContainer } from '@/components/ui/chart'
 
 import {
   HoverCard,
@@ -33,6 +35,28 @@ const props = withDefaults(
     showHud: true,
   }
 );
+
+const chartData = [
+  { date: new Date("2024-01-01"), desktop: 186, mobile: 80 },
+  { date: new Date("2024-02-01"), desktop: 305, mobile: 200 },
+  { date: new Date("2024-03-01"), desktop: 237, mobile: 120 },
+];
+
+import type { ChartConfig } from '@/components/ui/chart'
+
+type Data = typeof chartData[number]
+
+const chartConfig = {
+  desktop: {
+    label: 'Desktop',
+    color: 'var(--chart-1)',
+  },
+  mobile: {
+    label: 'Mobile',
+    color: 'var(--chart-2)',
+  },
+} satisfies ChartConfig
+
 
 const viewportRef = ref<HTMLDivElement | null>(null);
 
@@ -68,6 +92,21 @@ function onPointerUp(e: PointerEvent) {
   try {
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   } catch { }
+}
+import { VisAxis } from "@unovis/vue"
+
+const xTickFormat = (v: any) => {
+  // if v is already a nice label (string), just return it:
+  // return String(v)
+
+  // if v is a date-like string (recommended):
+  const d = new Date(v)
+  return Number.isNaN(+d) ? String(v) : d.toLocaleDateString()
+}
+
+const yTickFormat = (v: any) => {
+  const n = Number(v)
+  return Number.isFinite(n) ? new Intl.NumberFormat().format(n) : String(v)
 }
 
 // Wheel zoom keeping cursor point stable
@@ -130,18 +169,48 @@ const hudText = computed(
       <div v-for="it in items" :key="it.id" class="absolute -translate-x-1/2 -translate-y-1/2"
         :style="{ left: it.x + 'px', top: it.y + 'px' }">
           <HoverCard>
-          <HoverCardTrigger>
-            <div class="container-col-flex text-center group">
-              <p class="text-xs">{{ it.label }}</p>
-              <img src="/src/assets/icons/video-camera.svg" width="64" height="64" alt="Camera Icon" />
-            </div>
-          </HoverCardTrigger>
-          <HoverCardContent>
-            <div class="text-sm font-medium">{{ it.label ?? it.id }}</div>
-            <div class="text-[11px] opacity-70">x={{ it.x }}, y={{ it.y }}</div>
-          </HoverCardContent>
-        </HoverCard>
-        
+            <HoverCardTrigger>
+              <div class="container-col-flex text-center group">
+                <p class="text-xs">{{ it.label }}</p>
+                <img src="/src/assets/icons/video-camera.svg" width="64" height="64" alt="Camera Icon" />
+              </div>
+            </HoverCardTrigger>
+
+            <HoverCardContent>
+              <ChartContainer :config="chartConfig" class="min-h-[200px] w-full">
+                <VisXYContainer
+                  :data="chartData"
+                  :margin="{ top: 8, right: 8, bottom: 28, left: 44 }"
+                >
+                  <VisArea
+                    :x="(d: Data) => d.date"
+                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
+                    :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
+                    :rounded-corners="4"
+                    bar-padding="0.1"
+                    group-padding="0"
+                  />
+
+                  <!-- Axes -->
+                  <VisAxis
+                    type="x"
+                    :tickFormat="xTickFormat"
+                    tickTextFontSize="10px"
+                  />
+                  <VisAxis
+                    type="y"
+                    :tickFormat="yTickFormat"
+                    :gridLine="true"
+                    tickTextFontSize="10px"
+                  />
+                </VisXYContainer>
+              </ChartContainer>
+
+              <div class="text-sm font-medium">{{ it.label ?? it.id }}</div>
+              <div class="text-[11px] opacity-70">x={{ it.x }}, y={{ it.y }}</div>
+            </HoverCardContent>
+          </HoverCard>
+                  
       </div>
     </div>
 

@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -86,27 +85,8 @@ async function onSubmit(values: any) {
 
 <template>
   <header
-    class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12"
+    class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
   >
-    <div class="flex items-center gap-2 px-4">
-      <SidebarTrigger class="-ml-1" />
-      <Separator class="mr-2 h-4" orientation="vertical" />
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem class="hidden md:block">
-            <BreadcrumbLink href="#"> Skyline Software</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator class="hidden md:block" />
-          <BreadcrumbItem class="hidden md:block">
-            <BreadcrumbLink href="#"> Настройки</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator class="hidden md:block" />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Пользователи</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-    </div>
   </header>
   <section class="grid px-4 gap-2 mb-2 grid-cols-1 lg:grid-cols-12">
     <div class="bg-muted rounded-default p-4 lg:col-span-8 xl:col-span-9">

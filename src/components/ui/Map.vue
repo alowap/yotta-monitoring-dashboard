@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { VisArea, VisGroupedBar, VisXYContainer } from '@unovis/vue'
+import { VisArea, VisXYContainer } from '@unovis/vue'
 import { ChartContainer } from '@/components/ui/chart'
 
 import {
@@ -67,10 +67,17 @@ const dragging = ref(false);
 const last = ref({ x: 0, y: 0 });
 const cursorStyle = ref("cursor-default");
 
+// Item dragging state
+const draggingItem = ref<string | number | null>(null);
+const itemDragOffset = ref({ x: 0, y: 0 });
+const itemPositions = ref(
+  props.items.map(item => ({ ...item }))
+);
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
+// Viewport pan handlers
 function onPointerDown(e: PointerEvent) {
   dragging.value = true;
   cursorStyle.value = "cursor-move"
@@ -93,13 +100,58 @@ function onPointerUp(e: PointerEvent) {
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   } catch { }
 }
+
+// Item drag handlers
+function onItemPointerDown(e: PointerEvent, item: MapItem) {
+  e.stopPropagation(); // Prevent viewport pan
+  draggingItem.value = item.id;
+  
+  // Calculate offset between pointer and item center in world space
+  const worldPointerX = (e.clientX - pan.value.x) / zoom.value;
+  const worldPointerY = (e.clientY - pan.value.y) / zoom.value;
+  
+  itemDragOffset.value = {
+    x: worldPointerX - item.x,
+    y: worldPointerY - item.y
+  };
+  
+  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+}
+
+function onItemPointerMove(e: PointerEvent) {
+  if (draggingItem.value === null) return;
+  
+  e.stopPropagation();
+  
+  // Convert screen coordinates to world coordinates
+  const worldX = (e.clientX - pan.value.x) / zoom.value;
+  const worldY = (e.clientY - pan.value.y) / zoom.value;
+  
+  // Update item position
+  const item = itemPositions.value.find(
+    it => it.id === draggingItem.value
+  );
+  
+  if (item) {
+    item.x = worldX - itemDragOffset.value.x;
+    item.y = worldY - itemDragOffset.value.y;
+  }
+}
+
+function onItemPointerUp(e: PointerEvent) {
+  if (draggingItem.value === null) return;
+  
+  e.stopPropagation();
+  draggingItem.value = null;
+  
+  try {
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+  } catch { }
+}
+
 import { VisAxis } from "@unovis/vue"
 
 const xTickFormat = (v: any) => {
-  // if v is already a nice label (string), just return it:
-  // return String(v)
-
-  // if v is a date-like string (recommended):
   const d = new Date(v)
   return Number.isNaN(+d) ? String(v) : d.toLocaleDateString()
 }
@@ -136,7 +188,7 @@ const worldTransform = computed(
   () => `translate3d(${pan.value.x}px, ${pan.value.y}px, 0) scale(${zoom.value})`
 );
 
-// 🔥 Grid follows pan+zoom via CSS vars
+// Grid follows pan+zoom via CSS vars
 const cssVars = computed(() => {
   const cellZ = props.cellSize * zoom.value;      // screen spacing
   const bigZ = props.bigCellSize * zoom.value;
@@ -166,13 +218,22 @@ const hudText = computed(
 
     <!-- World -->
     <div class="absolute inset-0" :style="{ transform: worldTransform, transformOrigin: '0 0' }">
-      <div v-for="it in items" :key="it.id" class="absolute -translate-x-1/2 -translate-y-1/2"
-        :style="{ left: it.x + 'px', top: it.y + 'px' }">
+      <div 
+        v-for="it in itemPositions" 
+        :key="it.id" 
+        class="absolute -translate-x-1/2 -translate-y-1/2"
+        :class="{ 'cursor-grab': draggingItem !== it.id, 'cursor-grabbing': draggingItem === it.id }"
+        :style="{ left: it.x + 'px', top: it.y + 'px' }"
+        @pointerdown="(e) => onItemPointerDown(e, it)"
+        @pointermove="onItemPointerMove"
+        @pointerup="onItemPointerUp"
+        @pointercancel="onItemPointerUp"
+      >
           <HoverCard>
             <HoverCardTrigger>
-              <div class="container-col-flex text-center group">
+              <div class="container-col-flex select-none text-center group">
                 <p class="text-xs">{{ it.label }}</p>
-                <img src="/src/assets/icons/video-camera.svg" width="64" height="64" alt="Camera Icon" />
+                <img class="select-none pointer-events-none" src="/src/assets/icons/video-camera.svg" width="64" height="64" alt="Camera Icon" />
               </div>
             </HoverCardTrigger>
 
@@ -207,7 +268,7 @@ const hudText = computed(
               </ChartContainer>
 
               <div class="text-sm font-medium">{{ it.label ?? it.id }}</div>
-              <div class="text-[11px] opacity-70">x={{ it.x }}, y={{ it.y }}</div>
+              <div class="text-[11px] opacity-70">x={{ Math.round(it.x) }}, y={{ Math.round(it.y) }}</div>
             </HoverCardContent>
           </HoverCard>
                   
@@ -245,11 +306,11 @@ const hudText = computed(
     linear-gradient(to right, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
 
-  /* ✅ scale with zoom */
+  /* scale with zoom */
   background-size: var(--cellz) var(--cellz), var(--cellz) var(--cellz),
     var(--bigz) var(--bigz), var(--bigz) var(--bigz);
 
-  /* ✅ shift with pan */
+  /* shift with pan */
   background-position: var(--offx) var(--offy), var(--offx) var(--offy),
     var(--offxb) var(--offyb), var(--offxb) var(--offyb);
 }

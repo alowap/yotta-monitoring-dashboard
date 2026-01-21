@@ -1,24 +1,27 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { VisArea, VisXYContainer } from '@unovis/vue'
-import { ChartContainer } from '@/components/ui/chart'
-
+import MapItem from "./MapItem.vue";
+import Button from "./button/Button.vue";
+import { PackagePlus } from "lucide-vue-next";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
-type MapItem = {
+type MapItemType = {
   id: string | number;
   x: number;
   y: number;
-  label?: string;
+  label: string;
 };
 
 const props = withDefaults(
   defineProps<{
-    items: MapItem[];
+    items: MapItemType[];
     cellSize?: number;     // world px
     bigCellSize?: number;  // world px
     minZoom?: number;
@@ -35,28 +38,6 @@ const props = withDefaults(
     showHud: true,
   }
 );
-
-const chartData = [
-  { date: new Date("2024-01-01"), desktop: 186, mobile: 80 },
-  { date: new Date("2024-02-01"), desktop: 305, mobile: 200 },
-  { date: new Date("2024-03-01"), desktop: 237, mobile: 120 },
-];
-
-import type { ChartConfig } from '@/components/ui/chart'
-
-type Data = typeof chartData[number]
-
-const chartConfig = {
-  desktop: {
-    label: 'Desktop',
-    color: 'var(--chart-1)',
-  },
-  mobile: {
-    label: 'Mobile',
-    color: 'var(--chart-2)',
-  },
-} satisfies ChartConfig
-
 
 const viewportRef = ref<HTMLDivElement | null>(null);
 
@@ -102,36 +83,36 @@ function onPointerUp(e: PointerEvent) {
 }
 
 // Item drag handlers
-function onItemPointerDown(e: PointerEvent, item: MapItem) {
+function onItemPointerDown(e: PointerEvent, item: MapItemType) {
   e.stopPropagation(); // Prevent viewport pan
   draggingItem.value = item.id;
-  
+
   // Calculate offset between pointer and item center in world space
   const worldPointerX = (e.clientX - pan.value.x) / zoom.value;
   const worldPointerY = (e.clientY - pan.value.y) / zoom.value;
-  
+
   itemDragOffset.value = {
     x: worldPointerX - item.x,
     y: worldPointerY - item.y
   };
-  
+
   (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 }
 
 function onItemPointerMove(e: PointerEvent) {
   if (draggingItem.value === null) return;
-  
+
   e.stopPropagation();
-  
+
   // Convert screen coordinates to world coordinates
   const worldX = (e.clientX - pan.value.x) / zoom.value;
   const worldY = (e.clientY - pan.value.y) / zoom.value;
-  
+
   // Update item position
   const item = itemPositions.value.find(
     it => it.id === draggingItem.value
   );
-  
+
   if (item) {
     item.x = worldX - itemDragOffset.value.x;
     item.y = worldY - itemDragOffset.value.y;
@@ -140,26 +121,16 @@ function onItemPointerMove(e: PointerEvent) {
 
 function onItemPointerUp(e: PointerEvent) {
   if (draggingItem.value === null) return;
-  
+
   e.stopPropagation();
   draggingItem.value = null;
-  
+
   try {
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   } catch { }
 }
 
-import { VisAxis } from "@unovis/vue"
 
-const xTickFormat = (v: any) => {
-  const d = new Date(v)
-  return Number.isNaN(+d) ? String(v) : d.toLocaleDateString()
-}
-
-const yTickFormat = (v: any) => {
-  const n = Number(v)
-  return Number.isFinite(n) ? new Intl.NumberFormat().format(n) : String(v)
-}
 
 // Wheel zoom keeping cursor point stable
 function onWheel(e: WheelEvent) {
@@ -209,6 +180,30 @@ const hudText = computed(
 </script>
 
 <template>
+
+  <div class="absolute left-4 min-w-[200px] bottom-4 container-col-flex z-10">
+    <Dialog>
+      <DialogTrigger>
+        <Button size="lg" variant="outline" class="w-full shine-btn">
+          <PackagePlus />
+          Добавить ноду
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you absolutely sure?</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently delete your account
+            and remove your data from our servers.
+          </DialogDescription>
+        </DialogHeader>
+      </DialogContent>
+    </Dialog>
+    <div class="rounded-lg glassify border border-border px-2 py-1 text-xs">
+      <p class="opacity-30 text-center">{{ hudText }}</p>
+    </div>
+  </div>
+
   <div ref="viewportRef" :class="cursorStyle"
     class="fixed inset-0 overflow-hidden select-none bg-zinc-950 text-zinc-100" :style="cssVars"
     @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerUp"
@@ -218,66 +213,9 @@ const hudText = computed(
 
     <!-- World -->
     <div class="absolute inset-0" :style="{ transform: worldTransform, transformOrigin: '0 0' }">
-      <div 
-        v-for="it in itemPositions" 
-        :key="it.id" 
-        class="absolute -translate-x-1/2 -translate-y-1/2"
-        :class="{ 'cursor-grab': draggingItem !== it.id, 'cursor-grabbing': draggingItem === it.id }"
-        :style="{ left: it.x + 'px', top: it.y + 'px' }"
-        @pointerdown="(e) => onItemPointerDown(e, it)"
-        @pointermove="onItemPointerMove"
-        @pointerup="onItemPointerUp"
-        @pointercancel="onItemPointerUp"
-      >
-          <HoverCard>
-            <HoverCardTrigger>
-              <div class="container-col-flex select-none text-center group">
-                <p class="text-xs">{{ it.label }}</p>
-                <img class="select-none pointer-events-none" src="/src/assets/icons/video-camera.svg" width="64" height="64" alt="Camera Icon" />
-              </div>
-            </HoverCardTrigger>
-
-            <HoverCardContent>
-              <ChartContainer :config="chartConfig" class="min-h-[200px] w-full">
-                <VisXYContainer
-                  :data="chartData"
-                  :margin="{ top: 8, right: 8, bottom: 28, left: 44 }"
-                >
-                  <VisArea
-                    :x="(d: Data) => d.date"
-                    :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
-                    :color="[chartConfig.desktop.color, chartConfig.mobile.color]"
-                    :rounded-corners="4"
-                    bar-padding="0.1"
-                    group-padding="0"
-                  />
-
-                  <!-- Axes -->
-                  <VisAxis
-                    type="x"
-                    :tickFormat="xTickFormat"
-                    tickTextFontSize="10px"
-                  />
-                  <VisAxis
-                    type="y"
-                    :tickFormat="yTickFormat"
-                    :gridLine="true"
-                    tickTextFontSize="10px"
-                  />
-                </VisXYContainer>
-              </ChartContainer>
-
-              <div class="text-sm font-medium">{{ it.label ?? it.id }}</div>
-              <div class="text-[11px] opacity-70">x={{ Math.round(it.x) }}, y={{ Math.round(it.y) }}</div>
-            </HoverCardContent>
-          </HoverCard>
-                  
-      </div>
-    </div>
-
-    <div v-if="showHud"
-      class="absolute glassify left-4 bottom-4 container-col-flex z-10 rounded-lg border border-border px-2 py-1 text-xs">
-      <p class="opacity-30">{{ hudText }}</p>
+      <MapItem v-for="it in itemPositions" :key="it.id" :id="it.id" :label="it.label" :mapx="it.x" :mapy="it.y"
+        :dragging-item="draggingItem" :on-pointer-down="(e: PointerEvent) => onItemPointerDown(e, it)"
+        :on-pointer-move="onItemPointerMove" :on-pointer-up="onItemPointerUp" />
     </div>
 
     <!-- Slot for UI on top -->

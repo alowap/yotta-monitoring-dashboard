@@ -1,17 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import MapItem from "./MapItem.vue";
-import Button from "./button/Button.vue";
-import { PackagePlus } from "lucide-vue-next";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-
+import MapHud from "./MapHud.vue";
 type MapItemType = {
   id: string | number;
   x: number;
@@ -181,28 +171,7 @@ const hudText = computed(
 
 <template>
 
-  <div class="absolute left-4 min-w-[200px] bottom-4 container-col-flex z-10">
-    <Dialog>
-      <DialogTrigger>
-        <Button size="lg" variant="outline" class="w-full shine-btn">
-          <PackagePlus />
-          Добавить ноду
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Are you absolutely sure?</DialogTitle>
-          <DialogDescription>
-            This action cannot be undone. This will permanently delete your account
-            and remove your data from our servers.
-          </DialogDescription>
-        </DialogHeader>
-      </DialogContent>
-    </Dialog>
-    <div class="rounded-lg glassify border border-border px-2 py-1 text-xs">
-      <p class="opacity-30 text-center">{{ hudText }}</p>
-    </div>
-  </div>
+  <MapHud :hud-text="hudText" />
 
   <div ref="viewportRef" :class="cursorStyle"
     class="fixed inset-0 overflow-hidden select-none bg-zinc-950 text-zinc-100" :style="cssVars"

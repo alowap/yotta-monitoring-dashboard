@@ -55,7 +55,7 @@ const onSubmit = handleSubmit((values) => {
 <template>
   <section class="container mx-auto justify-center items-center flex flex-col h-screen">
     <div
-      class="flex flex-col w-full max-w-[300px] md:max-w-[600px] gap-6 p-8 bg-muted shadow-elevated rounded-xl"
+      class="flex flex-col w-full max-w-[300px] md:max-w-[600px] gap-6 p-8 glassify shadow-elevated rounded-lg"
     >
       <form @submit="onSubmit" class="flex flex-col gap-6">
         <div class="flex flex-col gap-1">
@@ -98,7 +98,7 @@ const onSubmit = handleSubmit((values) => {
           </FormField>
         </div>
         <div>
-          <Button size="lg" type="submit" class="w-full rounded-default"> Авторизоваться </Button>
+          <Button size="lg" type="submit" variant="outline" class="w-full rounded-lg shine-btn"> Авторизоваться </Button>
         </div>
       </form>
     </div>
